@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简番茄时钟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .transition-all-300 { transition: all 0.3s ease-in-out; }
+        body { -ms-overflow-style: none; scrollbar-width: none; }
+        body::-webkit-scrollbar { display: none; }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        /* 确保按钮在滑块之上，且可点击 */
+        .mode-btn { z-index: 20; position: relative; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center font-sans selection:bg-red-500 selection:text-white transition-colors duration-500" id="body-bg">
+
+    <div class="w-full max-w-md p-6">
+        <!-- 顶部标题 -->
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <h1 class="text-2xl font-bold tracking-wider">番茄专注</h1>
+            </div>
+            <div class="text-sm opacity-70" id="session-counter">今日专注: 0 次</div>
+        </header>
+
+        <!-- 模式切换标签 (修复版) -->
+        <!-- 使用 grid 布局确保平分宽度 -->
+        <div class="bg-gray-800 p-1 rounded-full grid grid-cols-3 mb-10 shadow-lg relative overflow-hidden isolate">
+            <!-- 滑动背景块 (z-10) -->
+            <div id="tab-bg" class="absolute top-1 bottom-1 bg-gray-700 rounded-full transition-all duration-300 ease-out z-10 shadow-sm"></div>
+            
+            <!-- 按钮 (z-20) -->
+            <button onclick="switchMode('pomodoro')" id="btn-pomodoro" class="mode-btn py-2 text-sm font-medium rounded-full transition-colors duration-300 text-white">专注</button>
+            <button onclick="switchMode('shortBreak')" id="btn-shortBreak" class="mode-btn py-2 text-sm font-medium rounded-full transition-colors duration-300 text-gray-400 hover:text-white">短休息</button>
+            <button onclick="switchMode('longBreak')" id="btn-longBreak" class="mode-btn py-2 text-sm font-medium rounded-full transition-colors duration-300 text-gray-400 hover:text-white">长休息</button>
+        </div>
+
+        <!-- 计时器主体 -->
+        <div class="flex flex-col items-center justify-center mb-12 relative">
+            <div class="relative w-72 h-72">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <circle class="text-gray-800 stroke-current" stroke-width="4" cx="50" cy="50" r="45" fill="transparent"></circle>
+                    <circle id="progress-ring" class="text-red-500 progress-ring__circle stroke-current" stroke-width="4" stroke-linecap="round" cx="50" cy="50" r="45" fill="transparent" stroke-dasharray="282.743" stroke-dashoffset="0"></circle>
+                </svg>
+                <div class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center">
+                    <div id="timer-display" class="text-7xl font-bold tracking-tighter tabular-nums">25:00</div>
+                    <div id="status-text" class="mt-2 text-lg uppercase tracking-widest text-red-400 font-medium opacity-80">准备专注</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制按钮 -->
+        <div class="flex justify-center gap-6 items-center">
+            <button onclick="resetTimer()" class="p-4 rounded-full bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all active:scale-95 shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>
+            </button>
+            <button id="main-btn" onclick="toggleTimer()" class="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-xl shadow-red-500/20 transition-all active:scale-95 hover:scale-105">
+                <svg id="icon-play" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <svg id="icon-pause" class="hidden" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            </button>
+             <button onclick="addTime()" class="p-4 rounded-full bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all active:scale-95 shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const MODES = {
+            pomodoro: { time: 25 * 60, label: '专注中', color: 'text-red-500', bg: 'bg-red-500', iconColor: 'text-red-400' },
+            shortBreak: { time: 5 * 60, label: '短休息', color: 'text-teal-400', bg: 'bg-teal-500', iconColor: 'text-teal-400' },
+            longBreak: { time: 15 * 60, label: '长休息', color: 'text-blue-500', bg: 'bg-blue-600', iconColor: 'text-blue-400' }
+        };
+
+        let currentMode = 'pomodoro';
+        let timeLeft = MODES.pomodoro.time;
+        let totalTime = MODES.pomodoro.time;
+        let timerId = null;
+        let isRunning = false;
+        let completedSessions = 0;
+
+        const timerDisplay = document.getElementById('timer-display');
+        const statusText = document.getElementById('status-text');
+        const progressRing = document.getElementById('progress-ring');
+        const playIcon = document.getElementById('icon-play');
+        const pauseIcon = document.getElementById('icon-pause');
+        const mainBtn = document.getElementById('main-btn');
+        const tabBg = document.getElementById('tab-bg');
+        const sessionCounter = document.getElementById('session-counter');
+        
+        const radius = progressRing.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+        progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressRing.style.strokeDashoffset = 0;
+
+        // 初始化：设置滑块位置
+        window.addEventListener('load', () => updateTabs('pomodoro'));
+        // 窗口大小改变时重新计算滑块
+        window.addEventListener('resize', () => updateTabs(currentMode));
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            document.title = `(${timerDisplay.textContent}) 番茄时钟`;
+
+            const progress = timeLeft / totalTime;
+            const dashoffset = circumference * (1 - progress);
+            progressRing.style.strokeDashoffset = dashoffset;
+        }
+
+        function toggleTimer() {
+            if (isRunning) pauseTimer();
+            else startTimer();
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            initAudio();
+            isRunning = true;
+            toggleIcons(true);
+            statusText.textContent = MODES[currentMode].label;
+            timerId = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateDisplay();
+                } else {
+                    completeTimer();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            clearInterval(timerId);
+            isRunning = false;
+            toggleIcons(false);
+            statusText.textContent = "已暂停";
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timeLeft = MODES[currentMode].time;
+            totalTime = MODES[currentMode].time;
+            statusText.textContent = currentMode === 'pomodoro' ? "准备专注" : "准备休息";
+            updateDisplay();
+            progressRing.style.strokeDashoffset = 0;
+            document.title = "极简番茄时钟";
+        }
+
+        function addTime() {
+             timeLeft += 60;
+             totalTime += 60;
+             updateDisplay();
+        }
+
+        function completeTimer() {
+            pauseTimer();
+            timeLeft = 0;
+            updateDisplay();
+            statusText.textContent = "已完成!";
+            playBeep();
+            if (currentMode === 'pomodoro') {
+                completedSessions++;
+                sessionCounter.textContent = `今日专注: ${completedSessions} 次`;
+            }
+        }
+
+        function switchMode(mode) {
+            pauseTimer();
+            currentMode = mode;
+            timeLeft = MODES[mode].time;
+            totalTime = MODES[mode].time;
+            
+            updateTheme(mode);
+            updateTabs(mode);
+            
+            statusText.textContent = mode === 'pomodoro' ? "准备专注" : "准备休息";
+            updateDisplay();
+            progressRing.style.strokeDashoffset = 0;
+        }
+
+        function toggleIcons(isPlaying) {
+            playIcon.classList.toggle('hidden', isPlaying);
+            pauseIcon.classList.toggle('hidden', !isPlaying);
+        }
+
+        function updateTheme(mode) {
+            const config = MODES[mode];
+            progressRing.setAttribute('class', `progress-ring__circle stroke-current transition-colors duration-500 ${config.color}`);
+            mainBtn.setAttribute('class', `w-20 h-20 rounded-full text-white flex items-center justify-center shadow-xl transition-all active:scale-95 hover:scale-105 duration-500 ${config.bg} shadow-${config.bg.replace('bg-', '')}/20`);
+            statusText.setAttribute('class', `mt-2 text-lg uppercase tracking-widest font-medium opacity-80 transition-colors duration-500 ${config.iconColor}`);
+        }
+
+        // --- 修复后的 Tab 更新逻辑 ---
+        function updateTabs(mode) {
+            const buttons = ['pomodoro', 'shortBreak', 'longBreak'];
+            const activeBtn = document.getElementById(`btn-${mode}`);
+            
+            // 1. 移动背景滑块 (使用 offsetLeft 和 offsetWidth 确保精准)
+            if (activeBtn) {
+                tabBg.style.width = `${activeBtn.offsetWidth}px`;
+                tabBg.style.left = `${activeBtn.offsetLeft}px`;
+            }
+
+            // 2. 更新文字颜色
+            buttons.forEach(m => {
+                const btn = document.getElementById(`btn-${m}`);
+                if (m === mode) {
+                    btn.classList.remove('text-gray-400', 'hover:text-white');
+                    btn.classList.add('text-white');
+                } else {
+                    btn.classList.add('text-gray-400', 'hover:text-white');
+                    btn.classList.remove('text-white');
+                }
+            });
+        }
+
+        // 音频相关
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playBeep() {
+            if (!audioCtx) initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.5);
+            
+            setTimeout(() => {
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gain2.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                osc2.start();
+                osc2.stop(audioCtx.currentTime + 0.5);
+            }, 600);
+        }
+
+        updateDisplay();
+    </script>
+</body>
+</html>
+
+

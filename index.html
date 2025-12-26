@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的极简工具箱</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f3f4f6;
+            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            background-attachment: fixed;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .icon-box {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            color: #4338ca;
+            transition: transform 0.3s ease;
+        }
+        .glass-card:hover .icon-box {
+            transform: scale(1.1) rotate(5deg);
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <div class="container mx-auto px-4 py-12 max-w-6xl">
+        <div class="text-center mb-12">
+            <div class="inline-flex items-center justify-center p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/20 mb-6 shadow-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight drop-shadow-md">HTML 极简工具箱</h1>
+            <p class="text-indigo-100 text-lg">纯原生、无依赖、即开即用</p>
+        </div>
+
+        <div class="max-w-xl mx-auto mb-16 relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </div>
+            <input type="text" id="searchInput" placeholder="搜索工具..." class="w-full pl-11 pr-4 py-4 rounded-xl bg-white/90 border-0 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-lg">
+        </div>
+
+        <div id="toolsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- 工具卡片将在这里加载 -->
+        </div>
+        
+        <div class="text-center mt-20 text-indigo-200/60 text-sm">
+            &copy; <span id="year"></span> My HTML Toolbox
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        document.getElementById('year').innerText = new Date().getFullYear();
+        
+        // 从 config.js 获取图标库，如果没有则使用空对象
+        const icons = window.ICONS || {};
+        const toolsData = window.TOOLS_CONFIG || [];
+        const grid = document.getElementById('toolsGrid');
+
+        // 安全获取图标的函数（防崩）
+        function getIconPath(iconName) {
+            // 1. 尝试获取指定图标
+            if (icons[iconName]) return icons[iconName];
+            // 2. 尝试获取 default 图标
+            if (icons.default) return icons.default;
+            // 3. 最后的兜底（硬编码的齿轮图标），防止 config.js 里的 default 被删掉导致页面空白
+            return "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z";
+        }
+
+        function renderTools(filterText = "") {
+            grid.innerHTML = "";
+            const filteredTools = toolsData.filter(tool => 
+                tool.name.toLowerCase().includes(filterText.toLowerCase()) || 
+                tool.desc.toLowerCase().includes(filterText.toLowerCase())
+            );
+
+            if (filteredTools.length === 0) {
+                const msg = toolsData.length === 0 ? "请在 config.js 中添加工具" : "没有找到匹配的工具";
+                grid.innerHTML = `<div class="col-span-full text-center py-10"><p class="text-gray-500 text-lg">${msg}</p></div>`;
+                return;
+            }
+
+            filteredTools.forEach(tool => {
+                const iconPath = getIconPath(tool.icon);
+                const card = document.createElement('a');
+                card.href = tool.file;
+                card.className = "glass-card block rounded-2xl p-6 relative group no-underline";
+                card.innerHTML = `
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="icon-box p-3 rounded-xl shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="${iconPath}" /></svg>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2 group-hover:text-indigo-600 transition-colors">${tool.name}</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">${tool.desc}</p>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        renderTools();
+        document.getElementById('searchInput').addEventListener('input', (e) => renderTools(e.target.value));
+    </script>
+</body>
+</html>
+
+

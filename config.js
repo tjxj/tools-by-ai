@@ -42,6 +42,12 @@ window.TOOLS_CONFIG = [
         file: "password-gen.html",
         icon: "lock" // 使用了上面新定义的 lock 图标
     },
+        {
+        name: "番茄时钟🍅⏰",
+        desc: "极简番茄时钟，支持长短休息时间。",
+        file: "fanqie.html",
+        icon: "clock" // 使用了上面新定义的 lock 图标
+    },
     // 在这里继续添加...
 ];
 

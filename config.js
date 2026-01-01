@@ -48,6 +48,12 @@ window.TOOLS_CONFIG = [
         file: "fanqie.html",
         icon: "clock" // 使用了上面新定义的 lock 图标
     },
+    {
+        name: "DeepSeek新论文",
+        desc: "用十岁小孩可以理解的方式读论文",
+        file: "deepseekmHC.html",
+        icon: "lock" // 使用了上面新定义的 lock 图标
+    },
     // 在这里继续添加...
 ];
 

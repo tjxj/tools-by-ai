@@ -54,15 +54,6 @@ window.TOOLS_CONFIG = [
         icon: "code"
     },
 
-    // === 本地单文件工具 ===
-    {
-        name: "DeepSeek 论文解读",
-        desc: "用十岁小孩能理解的方式读论文。",
-        path: "deepseekmHC.html",
-        type: "file",
-        icon: "document"
-    },
-
     // === 外部链接 ===
     {
         name: "AI 导航网站",
